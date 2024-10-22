@@ -1,3 +1,22 @@
+# Python virtual environment
 venv/
+
+# Ignore Python-related files
+*.pyc
+__pycache__/
+
+# Arduino/AVR build artifacts
+*.o
+*.hex
+*.elf
+*.eep
+
+# Ignore the bin/ and obj/ directories (if used for builds)
 bin/
 obj/
+
+# Ignore build directory (if used)
+build/
+
+# MacOS system files
+.DS_Store
