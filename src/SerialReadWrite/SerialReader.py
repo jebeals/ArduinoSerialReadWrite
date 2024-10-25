@@ -1,9 +1,14 @@
 import serial
 import time
 from typing import Optional
-
+from datetime import datetime
+import json
+import os
+import pickle
 
 class SerialReader:
+
+
     def __init__(self, port: str, baud_rate: int = 9600, timeout: int = 1,display_to_command: bool = True, log: str = None):
         """
         Initialize the SerialReader with the specified port and baud rate.
@@ -18,6 +23,8 @@ class SerialReader:
         self.serial_connection: Optional[serial.Serial] = None
         self._displayToCmd = display_to_command # dispaly to command option
         self.log = log
+        self._config_path = None
+        self._pkl_path = None
 
     def connect(self) -> None:
         """Open the serial connection."""
@@ -26,7 +33,9 @@ class SerialReader:
             time.sleep(self.timeout)  # Wait for the connection to establish
             if not self.serial_connection:
                 raise Exception("Connection timed out.")
-            print(f"Connected to Arduino on port {self.port}")
+            print(f"\nSuccessfully connected to Arduino on port {self.port}")
+            self.save_config()
+            SerialReader.pickle_config(self)
             if self._displayToCmd:
                 self.display_to_command()
         except serial.SerialException as e:
@@ -35,6 +44,31 @@ class SerialReader:
         except Exception as e:
             print(e)
             raise
+    
+    def save_config(self,filename='data/config.json') -> None:
+        cwd = os.getcwd()
+        if not os.path.exists(os.path.join(cwd,'data')):
+            os.mkdir(os.path.join(cwd,'data'))
+        if not self._config_path:
+            self._config_path = os.path.join(cwd,filename)
+        current_time = datetime.now().isoformat()
+        connect_config = {
+            "port": self.port,
+            "baud_rate": self.baud_rate,
+            "last_connected": current_time,  # You can dynamically get the current time
+            # "other_info": {
+            #     "device_name": self.device_name,
+            #     "firmware_version": firmware_version
+            # }
+        }
+
+        # Write the dictionary to a JSON file
+        with open(self._config_path, 'w') as file:
+            json.dump(connect_config, file, indent=4)
+        
+        print(f"Successfully saved connection configuration! ({self._config_path}).\n")
+
+        
 
     def read_serial(self) -> Optional[str]:
         """Read from the serial port and return the received data."""
@@ -43,18 +77,18 @@ class SerialReader:
         return None
     
     def display_to_command(self) -> Optional[str]:
-        print("Displaying Serial Monitor Output... \n")
-        while self._displayToCmd():
-            print(self.read_serial())
+        print("\n.......................Displaying Serial Monitor Output........................... \n")
+        while self._displayToCmd:
+            data = self.read_serial()
+            if data:
+                print(data)
+            time.sleep(0.001)
 
     def log_serial_output(self,logtimesec: float = 5, file_out: str = "serial_output.txt") -> None:
         t0 = time.time()
         while time.time()-t0 > logtimesec:
             self.log += (self.read_serial() + "\n")
         self.write_to_file(file_out,self.log)
-
-        
-
 
     def write_to_file(self, filename: str, data: str) -> None:
         """
@@ -73,6 +107,48 @@ class SerialReader:
             self.serial_connection.close()
             print(f"Closed serial connection on port {self.port}")
             
+    @staticmethod
+    def load_last_config(obj_fp: str = 'data/SerialReaderObj.pkl',json_fp: str = 'data/config.json') -> Optional['SerialReader']:
+
+        cwd = os.getcwd()
+        pkl_path = os.path.join(cwd,obj_fp)
+        if os.path.exists(pkl_path):
+            # print(f"Loading last Serial Reader configuraiton ({pkl_path})....")
+            with open(pkl_path, 'rb') as file:
+                try:
+                    obj = pickle.load(file)
+                    print(f"SerialReader object loaded from {pkl_path}")
+                    return obj
+                except pickle.UnpicklingError as e:
+                    #print(f"Error loading SerialReader object: {e}")
+                    #return None
+                    pass
+        
+        json_path = os.path.join(cwd,json_fp)
+        if os.path.exists(json_path):
+            # Step 1: Load the JSON data from the file
+            with open(json_fp, 'r') as file:
+                data = json.load(file)
+
+            # Step 2: Access specific nodes (fields/values)
+            port = data.get("port")
+            baud_rate = data.get("baud_rate")
+            last_connected = data.get("last_connected")
+
+            # Return recontructed objet:
+            return SerialReader(port=port,baud_rate=baud_rate) #gj jason
+    
+    @staticmethod
+    def pickle_config(sr: 'SerialReader', filename = 'data/SerialReaderObj.pkl') -> None:
+        cwd = os.getcwd()
+        if not os.path.exists(os.path.join(cwd,'data')):
+            os.mkdir(os.path.join(cwd,'data'))
+        if not sr._pkl_path:
+            sr._pkl_path = os.path.join(cwd,filename)
+
+        with open(sr._pkl_path, 'wb') as file:
+            pickle.dump(sr, file)
+        print(f"SerialReader object saved to {sr._pkl_path}")
 
 if __name__ == "__main__":
 

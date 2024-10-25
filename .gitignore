@@ -1,3 +1,6 @@
+# metadata from cli prorgam:
+./src/serialreadwrite/data
+
 # Python virtual environment
 venv/
 .vscode/ 
@@ -21,3 +24,5 @@ build/
 
 # MacOS system files
 .DS_Store
+
+
