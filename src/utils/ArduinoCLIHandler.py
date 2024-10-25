@@ -3,7 +3,7 @@ import platform
 import os
 from typing import Optional
 import time
-from ..utils import input_with_timeout
+from .utils import input_with_timeout
 
 class ArduinoCLIHandler:
 

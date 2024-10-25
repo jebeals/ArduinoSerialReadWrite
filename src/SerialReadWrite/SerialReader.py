@@ -4,7 +4,7 @@ from typing import Optional
 
 
 class SerialReader:
-    def __init__(self, port: str, baud_rate: int = 9600, timeout: int = 1,_displayToCmd: bool = True, log: str = None):
+    def __init__(self, port: str, baud_rate: int = 9600, timeout: int = 1,display_to_command: bool = True, log: str = None):
         """
         Initialize the SerialReader with the specified port and baud rate.
         
@@ -16,7 +16,7 @@ class SerialReader:
         self.baud_rate = baud_rate # of the serial communication
         self.timeout = timeout     # in seconds
         self.serial_connection: Optional[serial.Serial] = None
-        self._displayToCmd = _displayToCmd # dispaly to command option
+        self._displayToCmd = display_to_command # dispaly to command option
         self.log = log
 
     def connect(self) -> None:
@@ -27,6 +27,8 @@ class SerialReader:
             if not self.serial_connection:
                 raise Exception("Connection timed out.")
             print(f"Connected to Arduino on port {self.port}")
+            if self._displayToCmd:
+                self.display_to_command()
         except serial.SerialException as e:
             print(f"Error: Could not open serial port {self.port}: {e}")
             raise
@@ -41,12 +43,15 @@ class SerialReader:
         return None
     
     def display_to_command(self) -> Optional[str]:
-        print("Outputting Serial Monitor... \n")
+        print("Displaying Serial Monitor Output... \n")
         while self._displayToCmd():
             print(self.read_serial())
 
-    def log_serial_output(self) -> None:
-        
+    def log_serial_output(self,logtimesec: float = 5, file_out: str = "serial_output.txt") -> None:
+        t0 = time.time()
+        while time.time()-t0 > logtimesec:
+            self.log += (self.read_serial() + "\n")
+        self.write_to_file(file_out,self.log)
 
         
 
